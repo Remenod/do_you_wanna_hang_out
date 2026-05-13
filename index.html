@@ -930,7 +930,7 @@
       place: '', lat: null, lng: null,
       date: '', hour: 18, min: 0,
       dress: '',
-      weather: '', vibe: '', music: '',
+      weather: '', flowers: '', vibe: '', music: '',
       wishes: ''
     };
 
@@ -1184,14 +1184,20 @@
       S.wishes = document.getElementById('wishes').value.trim();
       const t = `${String(S.hour).padStart(2, '0')}:${String(S.min).padStart(2, '0')}`;
 
+      const coordsLink = (S.lat && S.lng)
+        ? `<a href="https://www.google.com/maps/search/?api=1&query=${S.lat},${S.lng}">${S.lat.toFixed(6)}, ${S.lng.toFixed(6)}</a>`
+        : '—';
+
       const msg = `\
 💌 <b>Нова відповідь на анкету побачення!</b>
 
 📍 <b>Місце:</b> ${S.place || '—'}
+🗺 <b>Координати:</b> ${coordsLink}
 📅 <b>Дата:</b> ${S.date || '—'} о <b>${t}</b>
 👗 <b>Вбрання:</b> ${S.dress || '—'}
 
 ☀️ <b>Погода:</b> ${S.weather || '—'}
+💐 <b>Квіти:</b> ${S.flowers || '—'}
 🎭 <b>Атмосфера:</b> ${S.vibe || '—'}
 🎵 <b>Музика:</b> ${S.music || '—'}
 
