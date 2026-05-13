@@ -289,6 +289,20 @@
       font-weight: 500;
     }
 
+    /* Animated hidden input wrapper */
+    .hidden-input-wrap {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .hidden-input-wrap.open {
+      max-height: 150px;
+      opacity: 1;
+      margin-top: 15px;
+    }
+
     /* Buttons */
     .btn-primary {
       display: block;
@@ -777,12 +791,38 @@
         <span class="big-emoji">👗</span>
         <h1>У чому б ти хотіла<br><em>засяяти?</em></h1>
         <p class="subtitle">
-          Знайди своє ідеальне вбрання в інтернеті й скинь сюди посилання — аби кожна деталь того вечора була саме
-          такою, як ти мрієш ✨
+          Обери настрій свого образу на цей вечір ✨
         </p>
-        <span class="field-label">Посилання на сукню / вбрання</span>
-        <input id="dress-url" class="input-field" type="url"
-          placeholder="https://… (Zara, Rozetka, Instagram-магазин…)">
+
+        <div class="q-block" style="margin-bottom: 0;">
+          <div class="choices" id="g-dress">
+            <button class="choice" data-val="Елегантна червона" onclick="pickDress(this)">
+              <span class="choice-icon">❤️</span>Елегантна червона
+            </button>
+            <button class="choice" data-val="Ніжна зелена / Смарагдова" onclick="pickDress(this)">
+              <span class="choice-icon">🧚‍♀️</span>Смарагдова / Зелена
+            </button>
+            <button class="choice" data-val="Прозора" onclick="pickDress(this)">
+              <span class="choice-icon">😳</span>Прозора
+            </button>
+            <button class="choice" data-val="Не вгадав твій вибір" onclick="pickDress(this)">
+              <span class="choice-icon">🤷‍♂️</span>Не вгадав твій вибір
+            </button>
+            <button class="choice" data-val="Це буде сюрприз" onclick="pickDress(this)">
+              <span class="choice-icon">🎁</span>Сюрприз
+            </button>
+            <button class="choice" data-val="Не знаю що одягнути" onclick="pickDress(this, true)"
+              style="grid-column: span 2;">
+              <span class="choice-icon">🤷‍♀️</span>Не знаю що одягнути... (допоможеш?)
+            </button>
+          </div>
+        </div>
+
+        <div id="dress-url-wrap" class="hidden-input-wrap">
+          <span class="field-label">Скинь посилання, оберемо разом або покажи що тобі подобається:</span>
+          <input id="dress-url" class="input-field" type="url" placeholder="https://… (Zara, Instagram-магазин…)">
+        </div>
+
         <div class="nav-row">
           <button class="btn-ghost" onclick="goTo(2,'back')">← Назад</button>
           <button class="btn-primary" onclick="goTo(4)">Далі →</button>
@@ -929,7 +969,7 @@
     const S = {
       place: '', lat: null, lng: null,
       date: '', hour: 18, min: 0,
-      dress: '',
+      dress_choice: '', dress_url: '',
       weather: '', flowers: '', vibe: '', music: '',
       wishes: ''
     };
@@ -1168,12 +1208,26 @@
     }
 
     // ─────────────────────────────────────────────
-    // CHOICE BUTTONS
+    // CHOICE BUTTONS & DRESS LOGIC
     // ─────────────────────────────────────────────
     function pick(group, btn) {
       document.querySelectorAll('#g-' + group + ' .choice').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       S[group] = btn.dataset.val;
+    }
+
+    function pickDress(btn, showInput = false) {
+      document.querySelectorAll('#g-dress .choice').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      S.dress_choice = btn.dataset.val;
+
+      const wrap = document.getElementById('dress-url-wrap');
+      if (showInput) {
+        wrap.classList.add('open');
+      } else {
+        wrap.classList.remove('open');
+        document.getElementById('dress-url').value = '';
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -1184,13 +1238,18 @@
       btn.disabled = true;
       btn.textContent = "Відправляємо... 💌";
 
-      S.dress = document.getElementById('dress-url').value.trim();
+      S.dress_url = document.getElementById('dress-url').value.trim();
       S.wishes = document.getElementById('wishes').value.trim();
       const t = `${String(S.hour).padStart(2, '0')}:${String(S.min).padStart(2, '0')}`;
 
       const coordsLink = (S.lat && S.lng)
         ? `<a href="https://www.google.com/maps/search/?api=1&query=${S.lat},${S.lng}">${S.lat.toFixed(6)}, ${S.lng.toFixed(6)}</a>`
         : '—';
+
+      let finalDress = S.dress_choice || '—';
+      if (S.dress_url) {
+        finalDress += `\n🔗 <i>Посилання:</i> ${S.dress_url}`;
+      }
 
       let deviceInfo = "Невідомий пристрій";
       const ua = navigator.userAgent;
@@ -1221,7 +1280,9 @@
 📍 <b>Місце:</b> ${S.place || '—'}
 🗺 <b>Координати:</b> ${coordsLink}
 📅 <b>Дата:</b> ${S.date || '—'} о <b>${t}</b>
-👗 <b>Вбрання:</b> ${S.dress || '—'}
+
+👗 <b>Вбрання:</b> 
+${finalDress}
 
 ☀️ <b>Погода:</b> ${S.weather || '—'}
 💐 <b>Квіти:</b> ${S.flowers || '—'}
@@ -1238,12 +1299,11 @@ ${S.wishes || (S.wishes === '' ? '(не вказано)' : S.wishes)}`;
         await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'HTML' })
+          body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'HTML', disable_web_page_preview: true })
         });
       } catch (e) {
         console.error('TG error', e);
       } finally {
-        // Повертаємо кнопку в нормальний стан (на випадок помилки)
         btn.disabled = false;
         btn.textContent = "Відправити 💌";
       }
