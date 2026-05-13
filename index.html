@@ -1180,6 +1180,10 @@
     // SUBMIT → TELEGRAM
     // ─────────────────────────────────────────────
     async function send() {
+      const btn = document.querySelector('#step-5 .btn-primary');
+      btn.disabled = true;
+      btn.textContent = "Відправляємо... 💌";
+
       S.dress = document.getElementById('dress-url').value.trim();
       S.wishes = document.getElementById('wishes').value.trim();
       const t = `${String(S.hour).padStart(2, '0')}:${String(S.min).padStart(2, '0')}`;
@@ -1188,8 +1192,31 @@
         ? `<a href="https://www.google.com/maps/search/?api=1&query=${S.lat},${S.lng}">${S.lat.toFixed(6)}, ${S.lng.toFixed(6)}</a>`
         : '—';
 
+      let deviceInfo = "Невідомий пристрій";
+      const ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod/i.test(ua)) deviceInfo = "🍏 iPhone / iPad";
+      else if (/Android/i.test(ua)) deviceInfo = "📱 Android";
+      else if (/Mac OS X/i.test(ua)) deviceInfo = "💻 Mac";
+      else if (/Windows/i.test(ua)) deviceInfo = "🖥 Windows";
+
+      let networkInfo = "Не вдалося визначити";
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          networkInfo = `${ipData.city || 'Місто невідоме'} (${ipData.org || 'Провайдер невідомий'})`;
+        }
+      } catch (e) {
+        console.warn("Помилка отримання IP", e);
+      }
+
       const msg = `\
 💌 <b>Нова відповідь на анкету побачення!</b>
+
+🕵️‍♀️ <b>Слідчий відділ (хто це міг бути):</b>
+📱 <i>Пристрій:</i> ${deviceInfo}
+🌐 <i>Мережа:</i> ${networkInfo}
+🕒 <i>Час заповнення:</i> ${new Date().toLocaleTimeString('uk-UA')}
 
 📍 <b>Місце:</b> ${S.place || '—'}
 🗺 <b>Координати:</b> ${coordsLink}
@@ -1213,9 +1240,14 @@ ${S.wishes || (S.wishes === '' ? '(не вказано)' : S.wishes)}`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'HTML' })
         });
-      } catch (e) { console.error('TG error', e) }
+      } catch (e) {
+        console.error('TG error', e);
+      } finally {
+        // Повертаємо кнопку в нормальний стан (на випадок помилки)
+        btn.disabled = false;
+        btn.textContent = "Відправити 💌";
+      }
     }
-
     // ─────────────────────────────────────────────
     // FINAL SPARKLE ANIMATION
     // ─────────────────────────────────────────────
