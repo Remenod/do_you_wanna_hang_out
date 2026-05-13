@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💌 Для тебе</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,600&family=Raleway:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #060310;
+      --card: rgba(255, 255, 255, 0.042);
+      --border: rgba(220, 160, 180, 0.16);
+      --rose: #e8849a;
+      --violet: #9b6fd8;
+      --gold: #d4a853;
+      --text: #faedf2;
+      --muted: rgba(250, 237, 242, 0.48);
+      --btn: linear-gradient(135deg, #c96b88, #7b4fc4);
+      --btn-hover: linear-gradient(135deg, #d97898, #8b5fd4);
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'Raleway', sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Animated gradient bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 40%, rgba(155, 111, 216, 0.09) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 85% 25%, rgba(232, 132, 154, 0.09) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 50% 90%, rgba(212, 168, 83, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: bgPulse 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0% {
+        opacity: .7
+      }
+
+      100% {
+        opacity: 1
+      }
+    }
+
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: .6;
+    }
+
+    /* Canvas */
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* App container */
+    #app {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    /* Steps */
+    .step {
+      display: none;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .step.active {
+      display: block;
+      animation: slideIn .55s cubic-bezier(.25, .46, .45, .94)
+    }
+
+    .step.back {
+      animation: slideInBack .55s cubic-bezier(.25, .46, .45, .94)
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(28px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes slideInBack {
+      from {
+        opacity: 0;
+        transform: translateY(-28px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 44px 38px;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+        0 8px 60px rgba(0, 0, 0, 0.5),
+        0 1px 0 rgba(255, 255, 255, 0.07) inset;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(220, 160, 180, 0.3), transparent);
+    }
+
+    /* Big emoji / icon */
+    .big-emoji {
+      font-size: 52px;
+      text-align: center;
+      display: block;
+      margin-bottom: 20px;
+      animation: floatY 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(232, 132, 154, 0.3));
+    }
+
+    @keyframes floatY {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-7px)
+      }
+    }
+
+    /* Heading */
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: 2.15rem;
+      line-height: 1.3;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    h1 em {
+      background: linear-gradient(135deg, var(--rose), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-style: normal;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.75;
+      margin-bottom: 30px;
+      font-weight: 300;
+    }
+
+    /* Gold divider */
+    .divider {
+      height: 1px;
+      margin: 24px 0;
+      background: linear-gradient(90deg, transparent, var(--gold) 40%, rgba(232, 132, 154, .4), transparent);
+      opacity: .35;
+    }
+
+    /* Progress */
+    .progress {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      margin-bottom: 26px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .12);
+      transition: all .4s ease;
+    }
+
+    .dot.done {
+      background: var(--rose);
+      transform: scale(1.1)
+    }
+
+    .dot.active {
+      background: var(--violet);
+      width: 22px;
+      border-radius: 4px;
+      box-shadow: 0 0 8px rgba(155, 111, 216, .5);
+    }
+
+    /* Inputs */
+    .input-field {
+      width: 100%;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px 18px;
+      color: var(--text);
+      font-family: 'Raleway', sans-serif;
+      font-size: .95rem;
+      font-weight: 400;
+      outline: none;
+      transition: border-color .3s, box-shadow .3s, background .3s;
+    }
+
+    .input-field::placeholder {
+      color: var(--muted)
+    }
+
+    .input-field:focus {
+      border-color: rgba(232, 132, 154, .5);
+      background: rgba(232, 132, 154, .04);
+      box-shadow: 0 0 0 3px rgba(232, 132, 154, .1);
+    }
+
+    textarea.input-field {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.6
+    }
+
+    .field-label {
+      display: block;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 9px;
+      font-weight: 500;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 15px 24px;
+      background: var(--btn);
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-family: 'Raleway', sans-serif;
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: .03em;
+      cursor: pointer;
+      margin-top: 22px;
+      transition: transform .2s, box-shadow .25s, background .3s;
+      box-shadow: 0 4px 24px rgba(201, 107, 136, .25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .08), transparent);
+      pointer-events: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(201, 107, 136, .38);
+      background: var(--btn-hover);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(220, 160, 180, .18);
+      color: var(--muted);
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-family: 'Raleway', sans-serif;
+      font-size: .88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--rose);
+      color: var(--rose)
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .nav-row .btn-primary {
+      margin-top: 0;
+      flex: 1
+    }
+
+    /* ── MAP ── */
+    #map-wrap {
+      position: relative
+    }
+
+    #map-search {
+      margin-bottom: 8px
+    }
+
+    #map-results {
+      list-style: none;
+      background: rgba(10, 5, 20, .96);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    }
+
+    #map-results li {
+      padding: 11px 16px;
+      cursor: pointer;
+      font-size: .87rem;
+      color: var(--text);
+      border-bottom: 1px solid rgba(255, 255, 255, .05);
+      transition: background .2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #map-results li::before {
+      content: '📍';
+      font-size: .8em
+    }
+
+    #map-results li:hover {
+      background: rgba(232, 132, 154, .1);
+      color: var(--rose)
+    }
+
+    #map-results li:last-child {
+      border-bottom: none
+    }
+
+    #leaflet-map {
+      height: 290px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .4);
+    }
+
+    #selected-place {
+      text-align: center;
+      margin-top: 10px;
+      font-size: .88rem;
+      color: var(--rose);
+      min-height: 18px;
+      font-weight: 300;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1rem;
+    }
+
+    /* ── CALENDAR ── */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .cal-nav {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cal-nav:hover {
+      border-color: var(--rose);
+      color: var(--rose);
+      background: rgba(232, 132, 154, .08)
+    }
+
+    .cal-month-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.25rem;
+      color: var(--text);
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .cal-wd {
+      text-align: center;
+      font-size: .7rem;
+      color: var(--muted);
+      padding: 5px 0;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: .87rem;
+      transition: all .2s;
+      border: 1px solid transparent;
+      color: var(--text);
+    }
+
+    .cal-day:hover:not(.past):not(.empty) {
+      border-color: rgba(232, 132, 154, .4);
+      background: rgba(232, 132, 154, .08);
+    }
+
+    .cal-day.today {
+      border-color: rgba(212, 168, 83, .4);
+      color: var(--gold)
+    }
+
+    .cal-day.selected {
+      background: var(--btn);
+      color: #fff;
+      box-shadow: 0 2px 14px rgba(201, 107, 136, .35);
+      border-color: transparent;
+    }
+
+    .cal-day.past {
+      opacity: .22;
+      cursor: not-allowed
+    }
+
+    .cal-day.empty {
+      cursor: default
+    }
+
+    /* ── TIME PICKER ── */
+    .time-picker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .time-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .time-btn {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+    }
+
+    .time-btn:hover {
+      border-color: var(--rose);
+      color: var(--rose)
+    }
+
+    .time-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.8rem;
+      font-weight: 300;
+      min-width: 54px;
+      text-align: center;
+      color: var(--text);
+      text-shadow: 0 0 20px rgba(232, 132, 154, .2);
+    }
+
+    .time-sep {
+      font-size: 2.2rem;
+      opacity: .5;
+      padding-bottom: 6px;
+      font-weight: 300
+    }
+
+    /* ── CHOICE BUTTONS ── */
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-bottom: 20px;
+    }
+
+    .choice {
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .25s;
+      color: var(--text);
+      font-family: 'Raleway', sans-serif;
+      font-size: .85rem;
+      font-weight: 400;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .choice:hover {
+      border-color: rgba(232, 132, 154, .4);
+      background: rgba(232, 132, 154, .06)
+    }
+
+    .choice.selected {
+      border-color: var(--violet);
+      background: rgba(155, 111, 216, .13);
+      box-shadow: 0 0 18px rgba(155, 111, 216, .18);
+      color: var(--text);
+    }
+
+    .choice-icon {
+      font-size: 1.7rem;
+      display: block;
+      line-height: 1
+    }
+
+    .q-label {
+      font-size: .87rem;
+      color: var(--text);
+      margin-bottom: 11px;
+      margin-top: 2px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+    }
+
+    .q-block {
+      margin-bottom: 22px
+    }
+
+    .q-block:last-child {
+      margin-bottom: 0
+    }
+
+    /* ── FINAL SCREEN ── */
+    .final-anim {
+      text-align: center;
+      font-size: 4.5rem;
+      margin-bottom: 14px;
+      animation: heartbeat 1.8s ease-in-out infinite;
+    }
+
+    @keyframes heartbeat {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      15% {
+        transform: scale(1.15)
+      }
+
+      30% {
+        transform: scale(1)
+      }
+
+      45% {
+        transform: scale(1.08)
+      }
+
+      60% {
+        transform: scale(1)
+      }
+    }
+
+    .final-sparkles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    /* Leaflet attribution */
+    .leaflet-control-attribution {
+      font-size: 9px !important;
+      opacity: .5
+    }
+
+    @media(max-width:420px) {
+      .card {
+        padding: 28px 18px
+      }
+
+      h1 {
+        font-size: 1.75rem
+      }
+
+      .choices {
+        gap: 7px
+      }
+
+      .choice {
+        padding: 11px 7px;
+        font-size: .8rem
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="app">
+
+    <!-- ══ STEP 0: Welcome ══ -->
+    <div class="step active" id="step-0">
+      <div class="card">
+        <span class="big-emoji">💌</span>
+        <h1>Тільки&nbsp;для&nbsp;тебе,<br><em>красунечко</em></h1>
+        <p class="subtitle">
+          Хтось дуже особливий підготував тут невеличке запитання...<br>
+          Декілька хвилин — і твій ідеальний вечір стане реальністю 🌹
+        </p>
+        <button class="btn-primary" onclick="goTo(1)">Почати ✨</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 1: Location ══ -->
+    <div class="step" id="step-1">
+      <div class="card">
+        <div class="progress" id="prog1"></div>
+        <span class="big-emoji">🗺️</span>
+        <h1>Де твоє <em>серце</em><br>хоче опинитись?</h1>
+        <p class="subtitle">
+          Уяви ідеальний вечір у Києві... Знайди місце, яке тебе надихає — саме туди ми й вирушимо 🌆
+        </p>
+        <span class="field-label">Пошук місця в Києві</span>
+        <input id="map-search" class="input-field" type="text" placeholder="Назва вулиці, ресторану, парку…"
+          autocomplete="off" oninput="onSearch(this.value)">
+        <input type="hidden" id="lat-coord">
+        <input type="hidden" id="lng-coord">
+        <div id="selected-place-coords" style="font-size: 0.8rem; color: #888; margin-top: 5px;"></div>
+        <ul id="map-results"></ul>
+        <div id="leaflet-map"></div>
+        <div id="selected-place">Натисни на карту або скористайся пошуком</div>
+        <div class="nav-row">
+          <button class="btn-ghost" onclick="goTo(0,'back')">← Назад</button>
+          <button class="btn-primary" onclick="nextTo(1,2,'place')">Далі →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 2: Date & Time ══ -->
+    <div class="step" id="step-2">
+      <div class="card">
+        <div class="progress" id="prog2"></div>
+        <span class="big-emoji">✨</span>
+        <h1>Коли твоє серденько<br>буде <em>вільне?</em></h1>
+        <p class="subtitle">
+          Підкажи, коли у тебе знайдеться та чарівна вільна хвилинка — ми забронюємо цей час лише для тебе 💫
+        </p>
+        <div id="calendar"></div>
+        <div class="divider"></div>
+        <p style="text-align:center;color:var(--muted);font-size:.88rem;margin-bottom:4px">А котра година тобі до душі?
+        </p>
+        <div class="time-picker">
+          <div class="time-unit">
+            <button class="time-btn" onclick="tick('h',1)">▲</button>
+            <div class="time-num" id="hh">18</div>
+            <button class="time-btn" onclick="tick('h',-1)">▼</button>
+          </div>
+          <div class="time-sep">:</div>
+          <div class="time-unit">
+            <button class="time-btn" onclick="tick('m',15)">▲</button>
+            <div class="time-num" id="mm">00</div>
+            <button class="time-btn" onclick="tick('m',-15)">▼</button>
+          </div>
+        </div>
+        <div class="nav-row">
+          <button class="btn-ghost" onclick="goTo(1,'back')">← Назад</button>
+          <button class="btn-primary" onclick="nextTo(2,3,'date')">Далі →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 3: Dress ══ -->
+    <div class="step" id="step-3">
+      <div class="card">
+        <div class="progress" id="prog3"></div>
+        <span class="big-emoji">👗</span>
+        <h1>У чому б ти хотіла<br><em>засяяти?</em></h1>
+        <p class="subtitle">
+          Знайди своє ідеальне вбрання в інтернеті й скинь сюди посилання — аби кожна деталь того вечора була саме
+          такою, як ти мрієш ✨
+        </p>
+        <span class="field-label">Посилання на сукню / вбрання</span>
+        <input id="dress-url" class="input-field" type="url"
+          placeholder="https://… (Zara, Rozetka, Instagram-магазин…)">
+        <div class="nav-row">
+          <button class="btn-ghost" onclick="goTo(2,'back')">← Назад</button>
+          <button class="btn-primary" onclick="goTo(4)">Далі →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 4: Fun questions ══ -->
+    <div class="step" id="step-4">
+      <div class="card">
+        <div class="progress" id="prog4"></div>
+        <span class="big-emoji">🌸</span>
+        <h1><em>Найважливіші</em><br>питання</h1>
+        <p class="subtitle">Обіцяю — це дуже серйозно 😄 Ну, майже...</p>
+
+        <div class="q-block">
+          <p class="q-label">☀️ Яку погоду ти б замовила на той вечір?</p>
+          <div class="choices" id="g-weather">
+            <button class="choice" data-val="Яскраве сонце" onclick="pick('weather',this)">
+              <span class="choice-icon">☀️</span>Яскраве сонце
+            </button>
+            <button class="choice" data-val="Тепла хмарність" onclick="pick('weather',this)">
+              <span class="choice-icon">🌤️</span>Тепло й хмарно
+            </button>
+            <button class="choice" data-val="Зоряне небо" onclick="pick('weather',this)">
+              <span class="choice-icon">🌙</span>Зорі й місяць
+            </button>
+            <button class="choice" data-val="Аби ти поруч" onclick="pick('weather',this)">
+              <span class="choice-icon">🌈</span>Аби ти поруч
+            </button>
+          </div>
+        </div>
+
+        <div class="q-block">
+          <p class="q-label">💐 Які квіти доповнили б цей момент?</p>
+          <div class="choices" id="g-flowers">
+            <button class="choice" data-val="Класичні троянди" onclick="pick('flowers',this)">
+              <span class="choice-icon">🌹</span>Ніжні троянди
+            </button>
+            <button class="choice" data-val="Польові квіти" onclick="pick('flowers',this)">
+              <span class="choice-icon">🌼</span>Польові квіти
+            </button>
+            <button class="choice" data-val="Тюльпани або півонії" onclick="pick('flowers',this)">
+              <span class="choice-icon">🌸</span>Півонії / Тюльпани
+            </button>
+            <button class="choice" data-val="Головне — увага" onclick="pick('flowers',this)">
+              <span class="choice-icon">✨</span>Головне — увага
+            </button>
+          </div>
+        </div>
+
+        <div class="q-block">
+          <p class="q-label">🎭 Яка атмосфера вечора тобі до душі?</p>
+          <div class="choices" id="g-vibe">
+            <button class="choice" data-val="Романтична вечеря" onclick="pick('vibe',this)">
+              <span class="choice-icon">🕯️</span>Романтична вечеря
+            </button>
+            <button class="choice" data-val="Прогулянка містом" onclick="pick('vibe',this)">
+              <span class="choice-icon">🚶</span>Прогулянка
+            </button>
+            <button class="choice" data-val="Затишне кафе" onclick="pick('vibe',this)">
+              <span class="choice-icon">☕</span>Затишне кафе
+            </button>
+            <button class="choice" data-val="Сюрприз!" onclick="pick('vibe',this)">
+              <span class="choice-icon">🎁</span>Сюрприз!
+            </button>
+          </div>
+        </div>
+
+        <div class="q-block">
+          <p class="q-label">🎵 Яка музика б звучала на фоні?</p>
+          <div class="choices" id="g-music">
+            <button class="choice" data-val="Джаз" onclick="pick('music',this)">
+              <span class="choice-icon">🎷</span>Джаз
+            </button>
+            <button class="choice" data-val="Інді / поп" onclick="pick('music',this)">
+              <span class="choice-icon">🎵</span>Інді / поп
+            </button>
+            <button class="choice" data-val="Класика" onclick="pick('music',this)">
+              <span class="choice-icon">🎻</span>Класика
+            </button>
+            <button class="choice" data-val="Тиша і твій голос" onclick="pick('music',this)">
+              <span class="choice-icon">🤫</span>Тиша і ти
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-row">
+          <button class="btn-ghost" onclick="goTo(3,'back')">← Назад</button>
+          <button class="btn-primary" onclick="goTo(5)">Далі →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 5: Personal wishes ══ -->
+    <div class="step" id="step-5">
+      <div class="card">
+        <div class="progress" id="prog5"></div>
+        <span class="big-emoji">💬</span>
+        <h1>Твоє слово —<br><em>закон</em></h1>
+        <p class="subtitle">
+          Чи є щось особливе, про що варто знати? Твоє таємне побажання, примха чи просто настрій — всі деталі важливі
+          🌹
+        </p>
+        <span class="field-label">Особисте побажання</span>
+        <textarea id="wishes" class="input-field"
+          placeholder="Пиши все що хочеш — від «хочу морозиво» до «зроби щось неймовірне»…"></textarea>
+        <div class="nav-row">
+          <button class="btn-ghost" onclick="goTo(4,'back')">← Назад</button>
+          <button class="btn-primary" onclick="send()">Відправити 💌</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 6: Thank you ══ -->
+    <div class="step" id="step-6">
+      <div class="card" style="text-align:center">
+        <div class="final-sparkles" id="fsparkles"></div>
+        <div class="final-anim">💕</div>
+        <h1>Дякую,<br><em>красунечко!</em></h1>
+        <p class="subtitle" style="margin-bottom:0">
+          Твої відповіді вже летять до потрібних рук...<br>
+          Зовсім скоро чекай на особливе запрошення 🌹<br><br>
+          <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;opacity:.75">
+            Цей вечір буде незабутнім ✨
+          </span>
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /app -->
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ─────────────────────────────────────────────
+    // CONFIG
+    // ─────────────────────────────────────────────
+    const TG_TOKEN = '8701886640:AAGIk91eoS3y6DGTm5gzXK3UybUmDGLXULE'; // I dont give a fuck
+    const TG_CHAT = '6119344300';
+
+    // ─────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────
+    const S = {
+      place: '', lat: null, lng: null,
+      date: '', hour: 18, min: 0,
+      dress: '',
+      weather: '', vibe: '', music: '',
+      wishes: ''
+    };
+
+    // ─────────────────────────────────────────────
+    // CANVAS PARTICLES
+    // ─────────────────────────────────────────────
+    (function () {
+      const cv = document.getElementById('canvas');
+      const cx = cv.getContext('2d');
+      let W, H, pts = [];
+      const SYM = ['♥', '✦', '·', '✧', '❋', '✿', '°', '*'];
+      const COL = ['#e8849a', '#9b6fd8', '#d4a853', '#f0b8c8'];
+
+      function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight }
+      resize(); addEventListener('resize', resize);
+
+      function mkPt() {
+        return {
+          x: Math.random() * W, y: H + 20,
+          s: Math.random() * 12 + 5,
+          sp: Math.random() * .45 + .15,
+          op: Math.random() * .35 + .08,
+          sym: SYM[Math.random() * SYM.length | 0],
+          dr: (Math.random() - .5) * .35,
+          col: COL[Math.random() * COL.length | 0],
+          rot: Math.random() * Math.PI * 2,
+          rsp: (Math.random() - .5) * .01
+        };
+      }
+      for (let i = 0; i < 28; i++) { const p = mkPt(); p.y = Math.random() * H; pts.push(p) }
+
+      function frame() {
+        cx.clearRect(0, 0, W, H);
+        pts.forEach((p, i) => {
+          p.y -= p.sp; p.x += p.dr; p.rot += p.rsp;
+          cx.save(); cx.globalAlpha = p.op; cx.fillStyle = p.col;
+          cx.font = p.s + 'px serif';
+          cx.translate(p.x, p.y); cx.rotate(p.rot);
+          cx.fillText(p.sym, -p.s / 4, p.s / 4);
+          cx.restore();
+          if (p.y < -30) pts[i] = mkPt();
+        });
+        requestAnimationFrame(frame);
+      }
+      frame();
+    })();
+
+    // ─────────────────────────────────────────────
+    // STEP NAVIGATION
+    // ─────────────────────────────────────────────
+    let cur = 0;
+    let mapOk = false, calOk = false;
+
+    function goTo(n, dir = 'fwd') {
+      const prev = document.getElementById('step-' + cur);
+      prev.classList.remove('active', 'back');
+      cur = n;
+      const el = document.getElementById('step-' + n);
+      el.classList.remove('active', 'back');
+      void el.offsetWidth;
+      el.classList.add('active');
+      if (dir === 'back') el.classList.add('back');
+      setProgress(n);
+      if (n === 1) {
+        if (!mapOk) { setTimeout(initMap, 120); mapOk = true; }
+        else setTimeout(() => map && map.invalidateSize(), 150);
+      }
+      if (n === 2 && !calOk) { initCal(); calOk = true }
+      scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function nextTo(from, to, req) {
+      if (req === 'place' && !S.place) { alert('Будь ласка, оберіть місце на карті 🗺️'); return }
+      if (req === 'date' && !S.date) { alert('Будь ласка, оберіть дату 📅'); return }
+      goTo(to);
+    }
+
+    // ─────────────────────────────────────────────
+    // PROGRESS DOTS
+    // ─────────────────────────────────────────────
+    function setProgress(step) {
+      for (let s = 1; s <= 5; s++) {
+        const el = document.getElementById('prog' + s);
+        if (!el) continue;
+        let h = '';
+        for (let i = 1; i <= 5; i++) {
+          let c = i < step ? 'done' : i === step ? 'active' : '';
+          h += `<div class="dot ${c}"></div>`;
+        }
+        el.innerHTML = h;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // MAP (Leaflet + Nominatim)
+    // ─────────────────────────────────────────────
+    let map, mark;
+
+    function initMap() {
+      map = L.map('leaflet-map', { zoomControl: true }).setView([50.4501, 30.5234], 12);
+
+      // Dark tile layer (CartoDB Dark Matter)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap © CARTO',
+        subdomains: 'abcd', maxZoom: 19
+      }).addTo(map);
+
+      const rIcon = L.divIcon({ html: '🌹', iconSize: [28, 28], className: '', iconAnchor: [14, 28] });
+
+      map.on('click', async e => {
+        const { lat, lng } = e.latlng;
+        placeMarker(lat, lng, rIcon);
+        S.lat = lat; S.lng = lng;
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=uk`);
+          const d = await r.json();
+          const name = d.display_name.split(',').slice(0, 2).join(', ');
+          S.place = name;
+          document.getElementById('selected-place').textContent = '📍 ' + name;
+        } catch {
+          S.place = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          document.getElementById('selected-place').textContent = '📍 ' + S.place;
+        }
+      });
+    }
+
+    function placeMarker(lat, lng, icon) {
+      if (mark) map.removeLayer(mark);
+      mark = L.marker([lat, lng], { icon: icon || L.divIcon({ html: '🌹', iconSize: [28, 28], className: '', iconAnchor: [14, 28] }) }).addTo(map);
+    }
+
+    let searchTimer;
+    function onSearch(q) {
+      clearTimeout(searchTimer);
+      const rl = document.getElementById('map-results');
+      if (q.length < 2) { rl.style.display = 'none'; return }
+      searchTimer = setTimeout(() => doSearch(q, rl), 480);
+    }
+
+    async function doSearch(q, rl) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Київ')}&format=json&limit=5&accept-language=uk&viewbox=30.2,50.6,30.9,50.3&bounded=0`;
+        const r = await fetch(url);
+        const data = await r.json();
+        rl.innerHTML = '';
+        if (!data.length) { rl.style.display = 'none'; return }
+        data.forEach(it => {
+          const name = it.display_name.split(',').slice(0, 3).join(', ');
+          const li = document.createElement('li');
+          li.textContent = name;
+          li.onclick = () => {
+            const la = parseFloat(it.lat), ln = parseFloat(it.lon);
+            map.setView([la, ln], 16);
+            placeMarker(la, ln);
+            S.place = name; S.lat = la; S.lng = ln;
+            document.getElementById('selected-place').textContent = '📍 ' + name;
+            document.getElementById('map-search').value = '';
+            rl.style.display = 'none';
+          };
+          rl.appendChild(li);
+        });
+        rl.style.display = 'block';
+      } catch (e) { console.error(e) }
+    }
+
+    // Click outside to close results
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#map-wrap'))
+        document.getElementById('map-results').style.display = 'none';
+    });
+
+    // ─────────────────────────────────────────────
+    // CALENDAR
+    // ─────────────────────────────────────────────
+    const MNS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+    const MGN = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+    const WDS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+
+    let calY, calM;
+    let selDate = null;
+
+    function initCal() {
+      const now = new Date();
+      calY = now.getFullYear(); calM = now.getMonth();
+      renderCal();
+    }
+
+    function renderCal() {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const first = new Date(calY, calM, 1);
+      const last = new Date(calY, calM + 1, 0).getDate();
+      let dow = first.getDay(); dow = dow === 0 ? 6 : dow - 1;
+
+      let h = `<div class="cal-header">
+    <button class="cal-nav" onclick="navCal(-1)">‹</button>
+    <span class="cal-month-name">${MNS[calM]} ${calY}</span>
+    <button class="cal-nav" onclick="navCal(1)">›</button>
+  </div><div class="cal-grid">`;
+
+      WDS.forEach(d => h += `<div class="cal-wd">${d}</div>`);
+      for (let i = 0; i < dow; i++)h += `<div class="cal-day empty"></div>`;
+
+      for (let d = 1; d <= last; d++) {
+        const td = new Date(calY, calM, d);
+        const past = td < now;
+        const today = td.getTime() === now.getTime();
+        const sel = selDate && selDate.getTime() === td.getTime();
+        let c = 'cal-day' + (past ? ' past' : '') + (today ? ' today' : '') + (sel ? ' selected' : '');
+        const fn = past ? '' : ` onclick="pickDay(${calY},${calM},${d})"`;
+        h += `<div class="${c}"${fn}>${d}</div>`;
+      }
+      h += '</div>';
+      document.getElementById('calendar').innerHTML = h;
+    }
+
+    function navCal(d) {
+      calM += d;
+      if (calM < 0) { calM = 11; calY-- }
+      if (calM > 11) { calM = 0; calY++ }
+      renderCal();
+    }
+
+    function pickDay(y, m, d) {
+      selDate = new Date(y, m, d);
+      S.date = `${d} ${MGN[m]} ${y}`;
+      renderCal();
+    }
+
+    // ─────────────────────────────────────────────
+    // TIME
+    // ─────────────────────────────────────────────
+    function tick(u, d) {
+      if (u === 'h') { S.hour = (S.hour + d + 24) % 24; document.getElementById('hh').textContent = String(S.hour).padStart(2, '0') }
+      else { S.min = (S.min + d + 60) % 60; document.getElementById('mm').textContent = String(S.min).padStart(2, '0') }
+    }
+
+    // ─────────────────────────────────────────────
+    // CHOICE BUTTONS
+    // ─────────────────────────────────────────────
+    function pick(group, btn) {
+      document.querySelectorAll('#g-' + group + ' .choice').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      S[group] = btn.dataset.val;
+    }
+
+    // ─────────────────────────────────────────────
+    // SUBMIT → TELEGRAM
+    // ─────────────────────────────────────────────
+    async function send() {
+      S.dress = document.getElementById('dress-url').value.trim();
+      S.wishes = document.getElementById('wishes').value.trim();
+      const t = `${String(S.hour).padStart(2, '0')}:${String(S.min).padStart(2, '0')}`;
+
+      const msg = `\
+💌 <b>Нова відповідь на анкету побачення!</b>
+
+📍 <b>Місце:</b> ${S.place || '—'}
+📅 <b>Дата:</b> ${S.date || '—'} о <b>${t}</b>
+👗 <b>Вбрання:</b> ${S.dress || '—'}
+
+☀️ <b>Погода:</b> ${S.weather || '—'}
+🎭 <b>Атмосфера:</b> ${S.vibe || '—'}
+🎵 <b>Музика:</b> ${S.music || '—'}
+
+💬 <b>Побажання:</b>
+${S.wishes || (S.wishes === '' ? '(не вказано)' : S.wishes)}`;
+
+      goTo(6);
+      launchSparkles();
+
+      try {
+        await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'HTML' })
+        });
+      } catch (e) { console.error('TG error', e) }
+    }
+
+    // ─────────────────────────────────────────────
+    // FINAL SPARKLE ANIMATION
+    // ─────────────────────────────────────────────
+    function launchSparkles() {
+      const wrap = document.getElementById('fsparkles');
+      const SYM2 = ['✦', '✧', '❋', '✿', '♥', '°', '*'];
+      const COL2 = ['#e8849a', '#9b6fd8', '#d4a853', '#f0c0d0'];
+      for (let i = 0; i < 22; i++) {
+        const el = document.createElement('div');
+        const x = Math.random() * 100, y = Math.random() * 100;
+        const s = Math.random() * 16 + 8;
+        el.textContent = SYM2[Math.random() * SYM2.length | 0];
+        el.style.cssText = `
+      position:absolute;left:${x}%;top:${y}%;
+      font-size:${s}px;color:${COL2[Math.random() * COL2.length | 0]};
+      opacity:0;pointer-events:none;
+      animation:sparkle ${1.5 + Math.random() * 2}s ease-out ${Math.random() * .8}s forwards;
+    `;
+        wrap.appendChild(el);
+      }
+      const style = document.createElement('style');
+      style.textContent = `@keyframes sparkle{0%{opacity:0;transform:scale(.3) rotate(0deg)}40%{opacity:.9}100%{opacity:0;transform:scale(1.5) rotate(180deg)}}`;
+      document.head.appendChild(style);
+    }
+  </script>
+</body>
+
+</html>
